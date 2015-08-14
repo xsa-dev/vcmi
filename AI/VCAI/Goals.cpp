@@ -55,9 +55,12 @@ std::string Goals::AbstractGoal::name() const //TODO: virtualize
 		case RECRUIT_HERO:
 			return "RECRUIT HERO";
 		case BUILD_STRUCTURE:
-			return "BUILD STRUCTURE";
+			if (town)
+				return boost::to_string(boost::format("BULD STRUCTUREE %s in %s") % town->town->buildings.at(BuildingID(bid))->Name() % town->name);
+			else
+				return boost::to_string(boost::format("BULD STRUCTUREE %d") % bid);
 		case COLLECT_RES:
-			desc = "COLLECT RESOURCE";
+			return boost::to_string (boost::format("COLLECT RESOURCE %d of %d") % value % resID);
 			break;
 		case GATHER_TROOPS:
 			desc = "GATHER TROOPS";
@@ -782,7 +785,42 @@ TSubgoal BuildThis::whatToDoToAchieve()
 	//TODO check res
 	//look for town
 	//prerequisites?
-	return iAmElementar();
+	BuildingID b(bid);
+	auto bs = cb->canBuildStructure(town, BuildingID(b));
+	switch (bs)
+	{
+		case EBuildingState::ALLOWED:
+			return iAmElementar();
+			break;
+		case EBuildingState::MISSING_BASE:
+		{
+			//TODO: refactor as TowInstance function
+			auto toBuild = town->town->buildings.at(b)->requirements.getFulfillmentCandidates([&](const BuildingID & buildID)
+			{
+				return town->hasBuilt(buildID);
+			});
+			assert (toBuild.size());
+			return sptr (BuildThis().settown(town).setbid(toBuild.front()));
+			//TODO: return all prerequisites as subgoals
+			break;
+		}
+		case EBuildingState::NO_RESOURCES:
+		{
+			TResources currentRes = cb->getResourceAmount();
+			TResources requiredResources = town->town->buildings.at(b)->resources;
+			TResources diff = requiredResources - currentRes;
+			//TODO: return all resources as subgoals
+			for (int res = Res::WOOD; res <= Res::GOLD; res++)
+				if (diff[res] > 0)
+					return sptr(CollectRes(res, diff[res]));
+			break;
+		}
+		default:
+			logAi->errorStream() << boost::format("Unhandled case %d required for building %d") % bs % bid;
+			return sptr (Goals::Invalid());
+	}
+
+	
 }
 
 TSubgoal CollectRes::whatToDoToAchieve()
@@ -1025,9 +1063,19 @@ TGoalVec GatherArmy::getAllPossibleSubgoals()
 					ret.push_back (sptr (Goals::VisitTile(pos).sethero(hero)));
 			}
 			auto potentialDwellings = std::vector<BuildingID> (unitsSource, unitsSource + ARRAY_COUNT(unitsSource));
-			auto bid = ai->canBuildAnyStructure(t, potentialDwellings, 8 - cb->getDate(Date::DAY_OF_WEEK));
-			if (bid != BuildingID::NONE)
-				ret.push_back (sptr(BuildThis(bid, t)));
+			for (auto bid : boost::adaptors::reverse(potentialDwellings))
+			{
+				switch (cb->canBuildStructure(t, bid)) //TODO: incorporate shedule with VCAI::canBuildStructure
+				{
+					case EBuildingState::ALLOWED:
+					case EBuildingState::MISSING_BASE:
+					case EBuildingState::NO_RESOURCES:
+						ret.push_back(sptr(BuildThis(bid, t)));
+						break;
+					default:
+						break;
+				}
+			}
 		}
 	}
 

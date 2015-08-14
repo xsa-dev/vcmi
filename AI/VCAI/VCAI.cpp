@@ -1152,7 +1152,7 @@ bool VCAI::canBuildStructure(const CGTownInstance * t, BuildingID building, unsi
 		else if (canBuild == EBuildingState::NO_RESOURCES)
 		{
 			//do not request resources in query
-			//TODO: where to request gather resources?
+			return false;
 		}
 		else if (canBuild == EBuildingState::PREREQUIRES)
 		{
@@ -1204,7 +1204,7 @@ BuildingID VCAI::canBuildAnyStructure(const CGTownInstance * t, std::vector<Buil
 	{
 		if(t->hasBuilt(building))
 			continue;
-		if (cb->canBuildStructure(t, building))
+		if (cb->canBuildStructure(t, building)) //TODO: check what condition we actually need
 			return building;
 	}
 	return BuildingID::NONE; //Can't build anything

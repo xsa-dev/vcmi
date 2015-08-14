@@ -503,7 +503,7 @@ float FuzzyHelper::evaluate (Goals::ClearWayTo & g)
 
 float FuzzyHelper::evaluate (Goals::BuildThis & g)
 {
-	return 1;
+	return 100; //testing - always choose
 }
 float FuzzyHelper::evaluate (Goals::DigAtTile & g)
 {

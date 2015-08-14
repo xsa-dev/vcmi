@@ -1104,11 +1104,8 @@ void VCAI::recruitCreatures(const CGDwelling * d, const CArmedInstance * recruit
 
 bool VCAI::canBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays)
 {
-	if (maxDays == 0)
-	{
-		logAi->warnStream() << "Request to build building " << building << " in 0 days!";
+	if (maxDays == 0) //we won't build given structure on time
 		return false;
-	}
 
 	if (!vstd::contains(t->town->buildings, building))
 		return false; // no such building in town
@@ -1148,15 +1145,14 @@ bool VCAI::canBuildStructure(const CGTownInstance * t, BuildingID building, unsi
 		{
 			if (!containsSavedRes(b->resources))
 			{
-				//TODO: where to request gather resources?
-				return false;
+				return true;
 			}
 			continue;
 		}
 		else if (canBuild == EBuildingState::NO_RESOURCES)
 		{
 			//do not request resources in query
-			//TODO: how to handle
+			//TODO: where to request gather resources?
 		}
 		else if (canBuild == EBuildingState::PREREQUIRES)
 		{

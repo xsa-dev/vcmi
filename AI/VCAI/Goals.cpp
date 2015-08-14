@@ -1024,8 +1024,8 @@ TGoalVec GatherArmy::getAllPossibleSubgoals()
 				if (!vstd::contains (ai->townVisitsThisWeek[hero], t))
 					ret.push_back (sptr (Goals::VisitTile(pos).sethero(hero)));
 			}
-			auto bid = ai->canBuildAnyStructure(t, std::vector<BuildingID>
-							(unitsSource, unitsSource + ARRAY_COUNT(unitsSource)), 8 - cb->getDate(Date::DAY_OF_WEEK));
+			auto potentialDwellings = std::vector<BuildingID> (unitsSource, unitsSource + ARRAY_COUNT(unitsSource));
+			auto bid = ai->canBuildAnyStructure(t, potentialDwellings, 8 - cb->getDate(Date::DAY_OF_WEEK));
 			if (bid != BuildingID::NONE)
 				ret.push_back (sptr(BuildThis(bid, t)));
 		}

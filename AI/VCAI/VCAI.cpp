@@ -1102,11 +1102,11 @@ void VCAI::recruitCreatures(const CGDwelling * d, const CArmedInstance * recruit
 	}
 }
 
-bool VCAI::tryBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays)
+bool VCAI::canBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays)
 {
 	if (maxDays == 0)
 	{
-		logAi->warnStream() << "Request to build building " << building <<  " in 0 days!";
+		logAi->warnStream() << "Request to build building " << building << " in 0 days!";
 		return false;
 	}
 
@@ -1124,12 +1124,12 @@ bool VCAI::tryBuildStructure(const CGTownInstance * t, BuildingID building, unsi
 	});
 	toBuild.push_back(building);
 
-	for(BuildingID buildID : toBuild)
+	for (BuildingID buildID : toBuild)
 	{
 		EBuildingState::EBuildingState canBuild = cb->canBuildStructure(t, buildID);
 		if (canBuild == EBuildingState::HAVE_CAPITAL
-		 || canBuild == EBuildingState::FORBIDDEN
-		 || canBuild == EBuildingState::NO_WATER)
+			|| canBuild == EBuildingState::FORBIDDEN
+			|| canBuild == EBuildingState::NO_WATER)
 			return false; //we won't be able to build this
 	}
 
@@ -1139,126 +1139,53 @@ bool VCAI::tryBuildStructure(const CGTownInstance * t, BuildingID building, unsi
 	TResources currentRes = cb->getResourceAmount();
 	//TODO: calculate if we have enough resources to build it in maxDays
 
-	for(const auto & buildID : toBuild)
+	for (const auto & buildID : toBuild)
 	{
 		const CBuilding *b = t->town->buildings.at(buildID);
 
 		EBuildingState::EBuildingState canBuild = cb->canBuildStructure(t, buildID);
-		if(canBuild == EBuildingState::ALLOWED)
+		if (canBuild == EBuildingState::ALLOWED)
 		{
-			if(!containsSavedRes(b->resources))
+			if (!containsSavedRes(b->resources))
 			{
-                logAi->debugStream() << boost::format("Player %d will build %s in town of %s at %s") % playerID % b->Name() % t->name % t->pos;
-				cb->buildBuilding(t, buildID);
-				return true;
+				//TODO: where to request gather resources?
+				return false;
 			}
 			continue;
 		}
-		else if(canBuild == EBuildingState::NO_RESOURCES)
+		else if (canBuild == EBuildingState::NO_RESOURCES)
 		{
-			//TResources income = estimateIncome();
-			TResources cost = t->town->buildings.at(buildID)->resources;
-			for (int i = 0; i < GameConstants::RESOURCE_QUANTITY; i++)
-			{
-				//int diff = currentRes[i] - cost[i] + income[i];
-				int diff = currentRes[i] - cost[i];
-				if(diff < 0)
-					saving[i] = 1;
-			}
-			continue;
+			//do not request resources in query
+			//TODO: how to handle
 		}
 		else if (canBuild == EBuildingState::PREREQUIRES)
 		{
 			// can happen when dependencies have their own missing dependencies
-			if (tryBuildStructure(t, buildID, maxDays - 1))
+			if (canBuildStructure(t, buildID, maxDays - 1))
 				return true;
 		}
 		else if (canBuild == EBuildingState::MISSING_BASE)
 		{
-			if (tryBuildStructure(t, b->upgrade, maxDays - 1))
-				 return true;
+			if (canBuildStructure(t, b->upgrade, maxDays - 1))
+				return true;
 		}
 	}
 	return false;
 }
 
-//bool VCAI::canBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays=7)
-//{
-//		if (maxDays == 0)
-//	{
-//		logAi->warnStream() << "Request to build building " << building <<  " in 0 days!";
-//		return false;
-//	}
-//
-//	if (!vstd::contains(t->town->buildings, building))
-//		return false; // no such building in town
-//
-//	if (t->hasBuilt(building)) //Already built? Shouldn't happen in general
-//		return true;
-//
-//	const CBuilding * buildPtr = t->town->buildings.at(building);
-//
-//	auto toBuild = buildPtr->requirements.getFulfillmentCandidates([&](const BuildingID & buildID)
-//	{
-//		return t->hasBuilt(buildID);
-//	});
-//	toBuild.push_back(building);
-//
-//	for(BuildingID buildID : toBuild)
-//	{
-//		EBuildingState::EBuildingState canBuild = cb->canBuildStructure(t, buildID);
-//		if (canBuild == EBuildingState::HAVE_CAPITAL
-//		 || canBuild == EBuildingState::FORBIDDEN
-//		 || canBuild == EBuildingState::NO_WATER)
-//			return false; //we won't be able to build this
-//	}
-//
-//	if (maxDays && toBuild.size() > maxDays)
-//		return false;
-//
-//	TResources currentRes = cb->getResourceAmount();
-//	TResources income = estimateIncome();
-//	//TODO: calculate if we have enough resources to build it in maxDays
-//
-//	for(const auto & buildID : toBuild)
-//	{
-//		const CBuilding *b = t->town->buildings.at(buildID);
-//
-//		EBuildingState::EBuildingState canBuild = cb->canBuildStructure(t, buildID);
-//		if(canBuild == EBuildingState::ALLOWED)
-//		{
-//			if(!containsSavedRes(b->resources))
-//			{
-//                logAi->debugStream() << boost::format("Player %d will build %s in town of %s at %s") % playerID % b->Name() % t->name % t->pos;
-//				return true;
-//			}
-//			continue;
-//		}
-//		else if(canBuild == EBuildingState::NO_RESOURCES)
-//		{
-//			TResources cost = t->town->buildings.at(buildID)->resources;
-//			for (int i = 0; i < GameConstants::RESOURCE_QUANTITY; i++)
-//			{
-//				int diff = currentRes[i] - cost[i] + income[i];
-//				if(diff < 0)
-//					saving[i] = 1;
-//			}
-//			continue;
-//		}
-//		else if (canBuild == EBuildingState::PREREQUIRES)
-//		{
-//			// can happen when dependencies have their own missing dependencies
-//			if (canBuildStructure(t, buildID, maxDays - 1))
-//				return true;
-//		}
-//		else if (canBuild == EBuildingState::MISSING_BASE)
-//		{
-//			if (canBuildStructure(t, b->upgrade, maxDays - 1))
-//				 return true;
-//		}
-//	}
-//	return false;
-//}
+bool VCAI::buildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays)
+{
+	if (canBuildStructure(t, building, maxDays))
+	{
+		logAi->debugStream() << boost::format("Player %d will build %s in town of %s at %s") % playerID % t->town->buildings.at(building)->Name() % t->name % t->pos;
+		return cb->buildBuilding(t, building);
+	}
+	else
+	{
+		logAi->warnStream() << boost::format("Player %d cannot build requested %s in town of %s at %s") % playerID % t->town->buildings.at(building)->Name() % t->name % t->pos;
+		return false;
+	}
+}
 
 bool VCAI::tryBuildAnyStructure(const CGTownInstance * t, std::vector<BuildingID> buildList, unsigned int maxDays)
 {
@@ -1266,15 +1193,18 @@ bool VCAI::tryBuildAnyStructure(const CGTownInstance * t, std::vector<BuildingID
 	{
 		if(t->hasBuilt(building))
 			continue;
-		if (tryBuildStructure(t, building, maxDays))
+		if (canBuildStructure(t, building, maxDays))
+		{
+			buildStructure(t, building, maxDays);
 			return true;
+		}
 	}
 	return false; //Can't build anything
 }
 
 BuildingID VCAI::canBuildAnyStructure(const CGTownInstance * t, std::vector<BuildingID> buildList, unsigned int maxDays)
 {
-	for(const auto & building : buildList)
+	for (const auto & building : boost::adaptors::reverse(buildList)) //we assume later structures are more powerful
 	{
 		if(t->hasBuilt(building))
 			continue;
@@ -1286,11 +1216,12 @@ BuildingID VCAI::canBuildAnyStructure(const CGTownInstance * t, std::vector<Buil
 
 bool VCAI::tryBuildNextStructure(const CGTownInstance * t, std::vector<BuildingID> buildList, unsigned int maxDays)
 {
-	for(const auto & building : buildList)
+	for(const auto & building : boost::adaptors::reverse(buildList)) //we assume later structures are more powerful
 	{
 		if(t->hasBuilt(building))
 			continue;
-		return tryBuildStructure(t, building, maxDays);
+		else if (canBuildStructure(t, building, maxDays))
+			buildStructure(t, building, maxDays);
 	}
 	return false;//Nothing to build
 }
@@ -1300,7 +1231,7 @@ void VCAI::buildStructure(const CGTownInstance * t)
 	//TODO make *real* town development system
 	//TODO: faction-specific development: use special buildings, build dwellings in better order, etc
 	//TODO: build resource silo, defences when needed
-	//Possible - allow "locking" on specific building (build prerequisites and then building itself)
+	//TODO: use Golas to allow "locking" on specific building (build prerequisites and then building itself)
 
 	TResources currentRes = cb->getResourceAmount();
 	TResources currentIncome = t->dailyIncome();
@@ -1330,8 +1261,11 @@ void VCAI::buildStructure(const CGTownInstance * t)
 	{
 		if (t->hasBuilt(unitsSource[i]) && !t->hasBuilt(unitsUpgrade[i]))
 		{
-			if (tryBuildStructure(t, unitsUpgrade[i]))
+			if (canBuildStructure(t, unitsUpgrade[i]))
+			{
+				buildStructure(t, unitsUpgrade[i]);
 				return;
+			}
 		}
 	}
 

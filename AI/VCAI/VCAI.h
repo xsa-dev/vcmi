@@ -131,8 +131,8 @@ public:
 	//internal methods for town development
 
 	//try build an unbuilt structure in maxDays at most (0 = indefinite)
-	/*bool canBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays=7);*/
-	bool tryBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays=7);
+	bool canBuildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays = 7);
+	bool buildStructure(const CGTownInstance * t, BuildingID building, unsigned int maxDays = 7);
 	//try build ANY unbuilt structure
 	BuildingID canBuildAnyStructure(const CGTownInstance * t, std::vector<BuildingID> buildList, unsigned int maxDays=7);
 	bool tryBuildAnyStructure(const CGTownInstance * t, std::vector<BuildingID> buildList, unsigned int maxDays=7);
